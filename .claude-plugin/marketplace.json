@@ -1,0 +1,15 @@
+{
+  "name": "powerup",
+  "description": "Marketplace de Alberto Benbunan: /powerups, las lecciones de Claude Code en un panel con botones.",
+  "owner": {
+    "name": "Alberto Benbunan"
+  },
+  "plugins": [
+    {
+      "name": "powerup",
+      "source": "./powerup",
+      "version": "0.1.0",
+      "description": "/powerups: las lecciones de Claude Code en un panel con botones, en el terminal y en la app de escritorio. Necesita CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1."
+    }
+  ]
+}
