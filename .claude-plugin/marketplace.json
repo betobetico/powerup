@@ -8,7 +8,7 @@
     {
       "name": "powerup",
       "source": "./powerup",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "description": "/powerups: las lecciones de Claude Code en un panel con botones, en el terminal y en la app de escritorio. Las lecciones se descargan con tu clave de acceso y se renuevan cada semana. Mod de function hooks; Claude Code 2.1.284 o posterior."
     }
   ]

@@ -14,6 +14,12 @@ type Motor = Parameters<Hook<'session.start'>>[0]
 // Las lecciones vistas se guardan en $.store y llevan ✓ en el menú. Donde no hay panel (el móvil),
 // el comando devuelve el menú o la lección como texto.
 //
+// Desde la 0.3 el panel anima el cambio de lección: al ir a otra con Siguiente, Anterior o el menú, las
+// líneas del cuerpo aparecen de una en una (unas 10 por segundo) con $.clock.every. Hay un solo
+// temporizador a la vez; cualquier otro redibujado (un botón, un cambio de tamaño, otra superficie)
+// pinta la lección entera y da la animación por acabada. Los botones nunca esperan. Los temporizadores
+// mueren con el módulo al recargarse. En móvil y en el texto de /powerups no hay animación.
+//
 // Nunca llamar `h` a una variable local: cada etiqueta JSX compila a una llamada a `h`.
 // Solo props que declara el claude-code.d.ts de /plugin-types: una prop que la build no conoce
 // invalida el árbol y el panel se queda vacío sin avisar (el motivo va al log de --debug).
@@ -43,6 +49,38 @@ let lecciones: Leccion[] = []
 let version = ''
 let estado: Estado = 'cargando'
 let carga: Promise<void> | null = null
+
+const MS_POR_LINEA = 100
+
+// animación en curso: la lección que se revela, cuántas líneas se ven, el temporizador y qué superficies
+// han pintado ya el fotograma actual (un segundo pintado del mismo fotograma no es de la animación)
+type Animacion = { leccion: number; lineas: number; timer: { cancel: () => void }; pintado: Set<string> }
+let animacion: Animacion | null = null
+
+function pararAnimacion(): void {
+  animacion?.timer.cancel()
+  animacion = null
+}
+
+// empieza a revelar la lección `i`; cancela la animación anterior, si la había
+function animar($: Motor, i: number): void {
+  pararAnimacion()
+  const largo = lecciones[i]?.cuerpo.length ?? 0
+  if (largo <= 1) return
+  const actual: Animacion = {
+    leccion: i,
+    lineas: 1,
+    pintado: new Set(),
+    timer: $.clock.every(MS_POR_LINEA, () => {
+      if (animacion !== actual) return
+      actual.lineas += 1
+      actual.pintado = new Set()
+      if (actual.lineas >= largo) pararAnimacion()
+      $.ui.invalidate('ui.render')
+    }),
+  }
+  animacion = actual
+}
 
 const total = () => lecciones.length
 const esLista = (v: unknown): v is number[] => Array.isArray(v) && v.every(n => typeof n === 'number')
@@ -174,6 +212,7 @@ export const register: Register = (on, options) => {
     const arg = e.args.trim().toLowerCase()
     if (arg === 'lista') return { text: menuTexto() }
     if (arg === 'reiniciar') {
+      pararAnimacion()
       vistas = new Set()
       vista = 'menu'
       await $.store.set('vistas', []).catch(err => $.ui.log(`${PLUGIN}: no se pudo guardar el progreso: ${err}`))
@@ -181,6 +220,7 @@ export const register: Register = (on, options) => {
       return { text: 'Progreso de power-ups reiniciado.' }
     }
     if (arg === 'cerrar') {
+      pararAnimacion()
       await $.ui.close({ id: PANEL }).catch(() => undefined)
       return { text: 'Power-ups cerrado.' }
     }
@@ -212,7 +252,10 @@ export const register: Register = (on, options) => {
   on('ui.render', { component: 'Pane' }, async ($, e, next) => {
     if (e.requestId !== PANEL || e.surface === 'mobile') return next(e)
     const { Box, Text, Button } = await $.ui.resolve(e)
-    const cerrar = () => void $.ui.close({ id: PANEL }).catch(() => undefined)
+    const cerrar = () => {
+      pararAnimacion()
+      void $.ui.close({ id: PANEL }).catch(() => undefined)
+    }
 
     if (estado !== 'ok') {
       return (
@@ -230,6 +273,8 @@ export const register: Register = (on, options) => {
 
     const ir = (destino: Vista) => {
       vista = destino
+      if (typeof destino === 'number') animar($, destino)
+      else pararAnimacion()
       if (typeof destino === 'number' && !vistas.has(destino)) {
         vistas.add(destino)
         void $.store.set('vistas', [...vistas]).catch(err => $.ui.log(`${PLUGIN}: no se pudo guardar el progreso: ${err}`))
@@ -238,6 +283,7 @@ export const register: Register = (on, options) => {
     }
     // el panel se cierra primero: mientras tiene el teclado, el prompt no acepta el borrador
     const probar = async (texto: string) => {
+      pararAnimacion()
       await $.ui.close({ id: PANEL }).catch(() => undefined)
       const r = await $.prompt.fill({ text: texto }).catch(() => undefined)
       if (!r?.isFilled) $.ui.toast(`Escribe en el prompt: ${texto}`)
@@ -296,27 +342,42 @@ export const register: Register = (on, options) => {
       return next(e)
     }
     const texto = l.prueba?.texto
+
+    // ¿este dibujo es un fotograma de la animación? Solo el primero de cada superficie y fotograma;
+    // cualquier otro redibujado pinta la lección entera y termina la animación
+    let visibles = l.cuerpo.length
+    if (animacion && animacion.leccion === i) {
+      if (animacion.pintado.has(e.surface)) pararAnimacion()
+      else {
+        animacion.pintado.add(e.surface)
+        visibles = Math.min(animacion.lineas, visibles)
+      }
+    } else if (animacion) pararAnimacion()
+    const revelando = visibles < l.cuerpo.length
     return (
       <Box flexDirection="column" paddingX={1}>
-        <Text bold>{`[${i + 1}/${total()}] ${l.titulo.toUpperCase()}`}</Text>
+        <Box flexDirection="row" columnGap={1}>
+          <Text bold>{`[${i + 1}/${total()}] ${l.titulo.toUpperCase()}`}</Text>
+          {revelando ? <Text dimColor>{`[${visibles}/${l.cuerpo.length}]`}</Text> : null}
+        </Box>
         <Box flexDirection="column" marginTop={1}>
-          {l.cuerpo.map(linea => (
+          {l.cuerpo.slice(0, visibles).map(linea => (
             <Text>{linea}</Text>
           ))}
         </Box>
-        {l.escritorio ? (
+        {revelando ? null : l.escritorio ? (
           <Box marginTop={1}>
             <Text italic>{`En la app de escritorio: ${l.escritorio}`}</Text>
           </Box>
         ) : null}
-        {l.prueba ? (
+        {!revelando && l.prueba ? (
           <Box flexDirection="column" marginTop={1}>
             <Text bold>PRUÉBALO</Text>
             {texto ? <Text color="cyan">{`> ${texto}`}</Text> : null}
             {l.prueba.nota ? <Text>{l.prueba.nota}</Text> : null}
           </Box>
         ) : null}
-        {l.consejo ? (
+        {!revelando && l.consejo ? (
           <Box marginTop={1}>
             <Text dimColor>{`Consejo: ${l.consejo}`}</Text>
           </Box>
