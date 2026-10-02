@@ -1,6 +1,6 @@
 {
   "name": "powerup",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "/powerups: las lecciones de Claude Code en un panel con botones, en el terminal y en la app de escritorio. Sin tokens: el plugin responde a cada clic sin pasar por el modelo. Las lecciones se descargan con tu clave de acceso y se renuevan cada semana. Mod (function hooks); Claude Code 2.1.284 o posterior.",
   "author": {
     "name": "Alberto Benbunan"
@@ -22,8 +22,8 @@
     "servidor": {
       "type": "string",
       "title": "Servidor de lecciones",
-      "description": "Déjalo vacío para usar el servidor de Alberto. Solo para pruebas: http://127.0.0.1:8787.",
-      "default": ""
+      "description": "Servidor que sirve las lecciones. Déjalo como está; solo para pruebas: http://127.0.0.1:8787.",
+      "default": "https://powerup-api.a-be5.workers.dev"
     }
   }
 }
