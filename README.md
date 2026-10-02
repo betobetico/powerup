@@ -4,16 +4,7 @@
 
 ## Requisitos
 
-- Claude Code 2.1.284 o posterior.
-- Function hooks activados. En `~/.claude/settings.json`:
-
-```json
-{
-  "env": {
-    "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1"
-  }
-}
-```
+- Claude Code 2.1.284 o posterior. Los mods (function hooks) vienen activados; no hace falta ninguna variable de entorno.
 
 ## Instalación
 

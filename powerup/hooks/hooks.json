@@ -1,4 +1,6 @@
 {
-  "description": "/powerups y su panel: menú de lecciones, lección con Pruébalo / Anterior / Siguiente / Menú / Cerrar, y el progreso en $.store. Sin function hooks, Claude Code ignora la clave modules.",
-  "modules": ["./register.tsx"]
+  "description": "/powerups y su panel: menú de lecciones, lección con Pruébalo / Anterior / Siguiente / Menú / Cerrar, y el progreso en $.store.",
+  "modules": [
+    "./register.tsx"
+  ]
 }

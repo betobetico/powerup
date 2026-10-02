@@ -8,8 +8,8 @@
     {
       "name": "powerup",
       "source": "./powerup",
-      "version": "0.1.0",
-      "description": "/powerups: las lecciones de Claude Code en un panel con botones, en el terminal y en la app de escritorio. Necesita CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1."
+      "version": "0.1.1",
+      "description": "/powerups: las lecciones de Claude Code en un panel con botones, en el terminal y en la app de escritorio. Mod de function hooks; Claude Code 2.1.284 o posterior."
     }
   ]
 }
